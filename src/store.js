@@ -59,7 +59,7 @@ function _dispatch(reducer, setState, action, args){
     catch(e){
       err = e;
     }
-    if ( result instanceof Promise ) {
+    if ( result && 'function' == typeof(result.then) ) {
       result.then((data)=>{
         if ( data ) {
           setState(assign({}, this.state, data));
