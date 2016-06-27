@@ -1,6 +1,5 @@
 'use strict';
-
-import assign from 'object-assign';
+var assign = require('object-assign');
 class BaseStore {
   constructor(initialState = {}){
     this.state = initialState;
@@ -10,7 +9,6 @@ class BaseStore {
   notifyListeners(){
     var listeners = this.currentListeners = this.nextListeners
     for (var i = 0; i < listeners.length; i++) {
-      console.log('notify', listeners[i]);
       listeners[i](this);
     }
   }
@@ -41,7 +39,7 @@ class BaseStore {
       //ensureCanMutateNextListeners()
       var index = this.nextListeners.indexOf(listener)
       this.nextListeners.splice(index, 1)
-    }
+    }.bind(this);
   }
 
   getState(){
@@ -49,7 +47,7 @@ class BaseStore {
   }
 }
 
-function _dispatch(reducer, setState, action, args){
+function _dispatch(reducer, lastState, setState, action, args){
     var func = reducer[action];
     if ( !func ) throw new Error(`Action[${action}] not defined`);
     var result, err = null;
@@ -62,7 +60,7 @@ function _dispatch(reducer, setState, action, args){
     if ( result && 'function' == typeof(result.then) ) {
       result.then((data)=>{
         if ( data ) {
-          setState(assign({}, this.state, data));
+          setState(assign({}, lastState, data));
           this.notifyListeners();
         }
       });
@@ -70,7 +68,7 @@ function _dispatch(reducer, setState, action, args){
     }
     else {
       if ( result ) {
-        setState(assign({}, this.state, result));
+        setState(assign({}, lastState, result));
         this.notifyListeners();
       }
       return new Promise((resolve, reject)=>{
@@ -92,7 +90,7 @@ class Store extends BaseStore {
     var setState = (newState)=>{
       this.state = newState;
     }
-    return _dispatch.call(this, this.reducer, setState, action, args);
+    return _dispatch.call(this, this.reducer, this.state, setState, action, args);
   }
 }
 
@@ -119,7 +117,8 @@ class CombineStore extends BaseStore {
       this.state = assign({}, this.state);
       this.state[reducerField] = newState;
     }
-    return _dispatch.call(this, reducer, setState, action, args);
+    var lastState = this.state && this.state[reducerField];
+    return _dispatch.call(this, reducer, lastState, setState, action, args);
   }
 }
 
